@@ -1,4 +1,5 @@
 ﻿using CollegeApp.Models;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
 
@@ -9,7 +10,7 @@ namespace CollegeApp.Controllers
     public class StudentController : ControllerBase
     {
         [HttpGet]
-        [Route("All",Name = "GetAllStudents")]
+        [Route("All", Name = "GetAllStudents")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public ActionResult<IEnumerable<StudentDTO>> GetStudents()
@@ -28,13 +29,13 @@ namespace CollegeApp.Controllers
             //    students.Add(obj);
             //}
             var students = CollegeRepository.Students.Select(s => new StudentDTO()
-                {
-                    Id = s.Id,
-                    StudentName = s.StudentName,
-                    Address = s.Address,
-                    Email = s.Email,
-                    
-                });
+            {
+                Id = s.Id,
+                StudentName = s.StudentName,
+                Address = s.Address,
+                Email = s.Email,
+
+            });
 
             //OK - 200 - Success
             return Ok(students);
@@ -89,10 +90,10 @@ namespace CollegeApp.Controllers
             };
             //Ok - 200 - Success
             return Ok(studentDTO);
-          
+
         }
-        
-        
+
+
         [HttpPost]
         [Route("Create")]
         //api/student/create
@@ -101,12 +102,12 @@ namespace CollegeApp.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public ActionResult<StudentDTO> CreateStudent([FromBody] StudentDTO model)
         {
-            if(model == null)
+            if (model == null)
             {
                 return BadRequest();
             }
 
-            if(model.AdmissionDate < DateTime.Now)
+            if (model.AdmissionDate < DateTime.Now)
             {
                 ModelState.AddModelError("AdmissionDate Erroe", "Admission date must be greater than or equal to");
                 return BadRequest(ModelState);
@@ -118,7 +119,7 @@ namespace CollegeApp.Controllers
                 StudentName = model.StudentName,
                 Address = model.Address,
                 Email = model.Email,
-                
+
             };
             CollegeRepository.Students.Add(student);
 
@@ -129,7 +130,7 @@ namespace CollegeApp.Controllers
             //New student details
             return CreatedAtRoute("GetStudentById", new { id = model.Id }, model);
             //return Ok(model);
-           
+
         }
 
         [HttpPut]
@@ -139,24 +140,61 @@ namespace CollegeApp.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public ActionResult<StudentDTO> UpdateStudent([FromBody] StudentDTO model)
+        public ActionResult UpdateStudent([FromBody] StudentDTO model)
         {
             if (model == null || model.Id <= 0)
                 BadRequest();
 
-            var existingStudent = CollegeRepository.Students.Where( s => s.Id == model?.Id).FirstOrDefault();
+            var existingStudent = CollegeRepository.Students.Where(s => s.Id == model?.Id).FirstOrDefault();
 
-            if(existingStudent == null)
+            if (existingStudent == null)
                 return NotFound();
 
             if (model?.StudentName != null) existingStudent.StudentName = model.StudentName;
 
             if (model?.Address != null) existingStudent.Address = model.Address;
             if (model?.Email != null) existingStudent.Email = model.Email;
-      
+
             return NoContent();
         }
-        
+
+        [HttpPatch]
+        [Route("{id:int}/UpdatePartial")]
+        //api/student/update
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public ActionResult UpdateStudentPartial(int id,[FromBody] JsonPatchDocument<StudentDTO> patchDocument)
+        {
+            if (patchDocument == null || id <= 0)
+                BadRequest();
+
+            var existingStudent = CollegeRepository.Students.Where(s => s.Id == id).FirstOrDefault();
+
+            if (existingStudent == null)
+                return NotFound();
+
+            var studentDTO = new StudentDTO
+            {
+                Id = existingStudent.Id,
+                StudentName = existingStudent.StudentName,
+                Address = existingStudent.Address,
+                Email = existingStudent.Email,
+            };
+
+            patchDocument?.ApplyTo(studentDTO,ModelState);
+
+            if (ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (studentDTO?.StudentName != null) existingStudent.StudentName = studentDTO.StudentName;
+            if (studentDTO?.Address != null) existingStudent.Address = studentDTO.Address;
+            if (studentDTO?.Email != null) existingStudent.Email = studentDTO.Email;
+
+            return NoContent();
+        }
+
         [HttpDelete("{id}", Name = "DeleteStudentById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
