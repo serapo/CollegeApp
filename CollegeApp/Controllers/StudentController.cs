@@ -131,6 +131,32 @@ namespace CollegeApp.Controllers
             //return Ok(model);
            
         }
+
+        [HttpPut]
+        [Route("Update")]
+        //api/student/update
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public ActionResult<StudentDTO> UpdateStudent([FromBody] StudentDTO model)
+        {
+            if (model == null || model.Id <= 0)
+                BadRequest();
+
+            var existingStudent = CollegeRepository.Students.Where( s => s.Id == model?.Id).FirstOrDefault();
+
+            if(existingStudent == null)
+                return NotFound();
+
+            if (model?.StudentName != null) existingStudent.StudentName = model.StudentName;
+
+            if (model?.Address != null) existingStudent.Address = model.Address;
+            if (model?.Email != null) existingStudent.Email = model.Email;
+      
+            return NoContent();
+        }
+        
         [HttpDelete("{id}", Name = "DeleteStudentById")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
